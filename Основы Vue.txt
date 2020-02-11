@@ -953,6 +953,87 @@ export default {
 }
 </script>
 
+
 Фильтры и Миксины.
+Создание простых фильтров.
+Фильтры (pipe) позволяют преобразовывать отображение строк или элементов внутри шаблона. Фильтры могут регистрироваться локально и глобально. Локально - с помощью свойства filters в компоненте. Фильтр представляет из себя функцию в этом объекте.
+{
+	filters: { 
+		filterName(parameter) { 
+			return 'string';
+		}
+	}
+}
+Чтобы применить фильтр нужно в строке в которой используется интерполяция поставить | и далее название фильтра.
+{{ expression | filter }}
+Фильтры можно применять последовательно: {{ expression | filter1 | filter2 }}
+Во время компиляции vue.js перед тем как вывести значение в шаблон, прогонит его через фильтр.
+Глобальная регистрация:
+Vue.filter({название-фильтра}, {фунция});
+Изначально в vue.js нет фильтров. Все фильтры должны быть созданы самостоятельно.
+
+Фильтрация списков.
+Фильтр может применяться к массиву: <li v-for="name of names | filter">, но так лучше не делать. В vue.js есть лучшее решение, позволяющее оптимизировать приложение. Нужно воспользоваться computed свойством, которое заранее будет знать, что оно будет зависить от двух элементов (names и searchName) => фильтрация будет вызываться только при изменении этих двух элементов.
+
+App.vue
+<template>
+	<div>
+		<h2>{{ title }}</h2>
+		<h2>{{ title | lowercase }}</h2>
+		<h2>{{ title | uppercase }}</h2>
+		<h2>{{ title | uppercase | lowercase }}</h2>
+		
+		<input type="text" v-model="searchName" >
+		<ul>
+			<li v-for="name of filteredNames">{{ name }}</li> <!-- Фиильтр использовать не нужно потому что есть более оптимальное решение в виде computed метода -->
+		</ul>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			title: 'Hello I am Vue!',
+			searchName: '',
+			names: ['Vlad', 'Max', 'Elena', 'Igor']
+		}
+	},
+	computed: {
+		filteredNames() { // для фильтрации массива более производительным решением будет использование computed метода вместо фильтра
+			return this.names.filter(name => {
+				return name.toLowerCase().indexOf(this.searchName.toLowerCase()) !== -1;
+			});
+		}
+	},
+	filters: { // в объекте filters регистрируются локальные фильтры
+		lowercase(value){ 				// каждый фильтр это отдельная функция
+			return value.toLowerCase();	// которая возвращает строку или другой объект валидный для использования в шаблоне
+		}
+	}
+}
+</script>
+<script>
+main.js
+import Vue from 'vue'
+import App from './App.vue'
+
+// глобальная регистрация фильтра
+Vue.filter('uppercase', (value) => { 
+	return value.toUpperCase(); 
+});
+</script>
+
+Использование миксинов.
+
+
+
+
+
+
+
+
+
+
+
 
 
