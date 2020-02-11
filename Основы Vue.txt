@@ -1,0 +1,958 @@
+Основы Vue.
+Vue берет все внутри элемента #app в html файле и преобразует в html, который передается браузеру. Внутри элемента код понятный для Vue, но не (html) для браузера.
+new Vue({
+  el: '#app',
+  data: {
+	url: 'http://google.com',
+    link: '<a href="http://google.com">Google</a>'
+  },
+  methods: {
+	name: function(){}
+  }
+})
+Внутри скобок {{ }} вычисляются javascript выражения (=> там можно вызвать метод, он должен возвращать тип, который можно преобразовать в строку).
+<h1>Sum: {{ 60 + 10 }}</h1>
+Для атрибутов так же можно писать javascript выражения, для этого используется директива v-bind. 
+<a v-bind:href="url">{{ url }}</a> Сокращенная запись: v-bind:href="url" => :href="url"
+Для вывода html кода - атрибут v-html, html будет встроен внутри тега. Есть опасность инъекций.
+<h2 v-html="link"></h2> => <h2><a href="http://google.com">Google</a></h2>
+
+События: v-on:event_name="function_name". В функцию передается стандарный объект события в качестве аргумента. (event.target.style.color = 'red').
+Передача параметров: v-on:click="riseCounter(5, 'Изменено на 5', $event)" 
+Сокращенная запись: @click="riseCounter(5, 'Изменено на 5', $event)"
+
+Модификаторы событий. Если нужно отменить стандартное поведение ссылки (отменить переход):
+<a href="http://google.com" target="_blank" v-on:click="clickOnGoogle">Google</a>
+clickOnGoogle: function(event){
+	event.preventDefault()
+}
+У Vue для этих случаев есть специальный модификатор:
+<a href="http://google.com" target="_blank" v-on:click.prevent="">Google</a>
+.prevent - preventDefault
+.stop - stopPropagation
+<h2 v-on:mousemove="handleMouseMove">
+	X: {{ x }} \ Y: {{ y }}
+	<span v-on:mousemove.stop="">Не изменять</span>
+</h2>
+handleMouseMove: function (event) {
+  this.x = event.clientX
+  this.y = event.clientY
+}
+Можно указывать любое количество модификаторов через точку:
+<input type="text" v-on:keyup.enter.space="alertValue"> - событие keyup сработает если нажать клавишу интер или пробел.
+
+Модель для работы с формами. 
+Двустароннее связывание: <input type="text" v-model="inputValue">
+Связывание срабатывающее при потере фокуса: <input type="text" v-model.lazy="inputValue">
+
+Работа с CSS классами.
+<div
+	class="circle"
+	@click="isActive = !isActive"
+	:class="getCssClasses" // :class="{	'red': this.isActive, 'green': !this.isActive }"
+></div>
+<div class="circle" :class="color"></div>
+<div class="circle" :class="[color, {'red': isActive}]"></div>
+<input type="text" v-model="color">
+
+<script>new Vue({
+  el: '#app',
+  data: {
+	isActive: false,
+	color: 'blue'
+  },
+  computed: {
+	getCssClasses: function() {
+	  return {
+		'red': this.isActive,
+		'green': !this.isActive
+	  }
+	}
+  }
+})</script>
+
+Тоже самое с атрибутом style.
+<div class="circle" :style="circleClasses"></div>
+<div class="circle" :style="[circleClasses, {'width': height + 'px'}]"></div>
+<hr>
+<input type="text" v-model="color">
+<input type="text" v-model="height">
+computed: {
+	circleClasses: function() {
+	  return {
+		'background': this.color,
+		'height': this.height + 'px'
+	  }
+	}
+}
+
+Управление видимостью элементов.
+<h2 v-if="isVisible">I am visible!</h2>
+<h2 v-else>No I am not!</h2>
+
+<h2 v-if="type === 'a'">A</h2>
+<h2 v-else-if="type === 'b'">B</h2>
+<h2 v-else-if="type === 'c'">C</h2>
+<h2 v-else>not match</h2>
+
+Чтобы сгруппировать несколько тегов можно использовать html5 тег <template></template>
+<template v-if="isVisible">
+	<h2>header</h2>
+	<p>Some text</p>
+</template>
+v-if удаляет элемент из DOM дерева, v-show добавляет style="display: none;" чтобы скрыть элемент.
+
+Работа со списками.
+В v-for можно использовать in и of: v-for="(el, index) in array" или v-for="(el, index) of array"
+перебор чисел: <li v-for="num of 4">{{ num }}</li>
+перебор полей объекта: <li v-for="(value, key, index) in object">
+<ul>
+	<li v-for="(person, index) of people">{{ index + 1 }}. {{ person.name }} - <b>{{ person.age }}</b></li>
+</ul>
+<hr>
+<ol>
+	<li v-for="num of 4">{{ num }}</li>
+</ol>
+<hr>
+<ul>
+	<li v-for="(value, key, index) in person"><em>{{ index + 1 }}</em> <b>{{ key }}</b> {{ value }}</li>
+</ul>
+<script>data: {
+  people: [
+	{name: 'Vlad', age: 20},
+	{name: 'Max', age: 25},
+	{name: 'Elena', age: 30}
+  ],
+  person: {
+	name: 'Max',
+	age: 50,
+	job: 'Frontend'
+  }
+}</script>
+
+Оптимизация приложения с computed.
+Функции из свойства methods вызываются при обновлении интерфейса, даже если обновляется та часть, которая не связана с данной функцией. Свойство computed позволяет сделать так, чтобы функции, которые не зависят от изменившихся переменных не вызывались. Т.е. если изменются переменные которые не используются внутри функции, функция не вызывается.
+
+<h2>Counter {{ counter }} \ {{ counter2 }}</h2>
+<h3>Result: {{ result() }}</h3>
+<h3>Computed result: {{ computedResult }}</h3>
+
+<button @click="add">Add</button>
+<button @click="sub">Sub</button>
+<button @click="counter2++">Add counter 2</button>
+<script>new Vue({
+el: '#app',
+data: {
+  counter: 0,
+  counter2: 0
+},
+methods: {
+  add: function() {
+	this.counter++
+  },
+  sub: function() {
+	this.counter--
+  },
+  result: function() { // вызывается при изменении counter2
+	console.log('Result was called')
+	return this.counter > 3 ? 'More than 3' : 'Less than 3'
+  }
+},
+computed: {
+  computedResult: function() { // не вызывается при изменении counter2
+	console.log('Computed result was called') 
+	return this.counter > 3 ? 'More than 3' : 'Less than 3'
+  }
+},
+watch: {
+  counter: function(val) {
+    console.log('From watch object', val)
+  }
+}
+})</script>
+
+Отслеживание изменений с watch.
+Свойство watch позволяет следить за изменением полей, которые есть в свойстве data. Для этого в нем определяются функции названия которых совпадают с названием поля в свойстве data. Функция будет вызываться при изменении поля. Аргументом получает отслеживаемый объект.
+
+Связывание разных приложений. Инстанс vue.
+<div id="app">
+	<h2>{{ title }}</h2>
+	<h3>{{ newField }}</h3>
+	<button @click="title = 'Updated title'">Update title</button>
+</div>
+<hr>
+<div id="app2">
+	<h2>{{ title }}</h2>
+	<button @click="updateFirstTitle">Update first title</button>
+</div>
+
+<script src="https://cdn,jsdelivr.net/npm/vue@2.5.13/dist/vue.js"></script>
+<script>
+	var vue1 = new Vue({
+		el: '#app',
+		data: {
+			title: 'Hello I am Vue!'
+		},
+		methods:{
+			alertFast: function(){
+				alert('I am from vue 1');
+			}
+		}
+	});
+	vue1.newField = 'Random text'; // не сработает, т.к. приложение уже проинициализировано. Обновится при изменении других полей
+	console.log(vue1);
+	new Vue({
+		el: 'app2',
+		data: {
+			title: 'Hello from Vue 2'
+		},
+		methods: {
+			updateFirstTitle: function(){
+				vue1.title = 'Updated from second app';
+				vue1.newField = 'New field from second app'; // сработает
+				
+				setTimeout(function(){
+					vue1.alertFast();
+				}, 1000);
+			}
+		}
+	});
+</script>
+Можно создавать сколько угодно инстансов Vue, каждый будет привязан к своему элементу по id. 
+Для взаимодействия между инстансами их можно присваивать переменным и обращаться к их полям из других инстансов Vue. Так же можно добавлять новые поля через переменную.
+Чтобы кнопка во втором приложении могла изменять title в первом нужно в методе второго обратиться к полю первого.
+
+Доступ к DOM элементам.
+Осуществляется с помощью атрибута ref. В объекте vue есть стандартные поля которые начинаются с $, доступ к DOM элементу из медтода осуществляется через this.$refs. Референсы используют виртуальный DOM, который строит vue.js и работают быстрее стандартных методов document.querySelector('h2');
+<h2 ref="heading">{{ title }}</h2>
+methods: {
+	updateFirstTitle: function(){
+		this.title = 'New title!';
+		this.$refs.heading.style.color = 'red';
+		console.log(this.$refs);
+		console.log(this.$refs.heading);
+	}
+	
+}
+
+Свойство template.
+Другой способ инициализации приложения без указания свойства el в объекте vue. После формирования готового объекта vue, его можно инициализировать в шаблоне с помощью метода $mount(element_css_selector). При указании поля el и css селектора, за кулисами vue делает тоже самое: $mount(el).
+Свойство template позволяет указывать строковый шаблон не в html'е, а внутри javascript'а. Огранечение: должен быть корневой элемент (например <div></div>) который оборачивает весь остальной контент.
+<div id="app">
+	<h2>{{title}}</h2>
+</div>
+<script>
+var vue = new Vue({ //нет поля el
+	data: {
+		title: 'Hello I am Vue!';
+	},
+	template: '<h1>{{title}} From template!</h1>'
+});
+vue.$mount('#app');
+</script>
+
+Жизненный цикл.
+Можно следить за этапами жизненного цикла инстанса vue:
+- beforeCreate - вызывается когда прошла инициализация и vue готовится создать новое приложение;
+- created - на этом этапе vue приложение уже будет создано. На данном этапе еще не было создания html кода. Vue приложение было создано и после этого оно будет анализировать шаблон;
+- beforeMount - vue начало анализировать шаблон и собирается его вставить в элемент который является точкой инициализации приложения (указанный в поле el). Т.е. Vue готовится вставить скомпилированный шаблон в DOM дерево.
+- mounted - html дерево готово и вставлено в dom.
+
+Дополнительные этапы, которые вызываются перед тем как что-то изменилось и как что-то закончило изменяться (чтобы они сработали нужно например нажать на кнопку):
+- beforeUpdate - vue говорит о том что сейчас оно будет обновляться (title еще не изменился).
+- updated - изменения закончены, шаблон перерисован.
+
+Этапы помогающие отслеживать удаление или уничтожение компонета vue:
+- beforeDestroy - 
+- destroyed - вызовется когда инстанс удалится.
+Для доступа к функциям, которые вызываются в различные этапы жц приложения они определяются в объекте vue.
+<div id="app">
+	<h2>{{ title }}</h2>
+	<button @click="title = 'Updated title'">Update title</button>
+	<button @click="doDestroy">Destroy</button>
+</div>
+<script>
+var vue = new Vue({ //нет поля el
+	el: '#app',
+	data: {
+		title: 'Hello I am Vue!';
+	},
+	methods:{
+		doDestroy: function(){
+			this.$destroy(); // уничтожает приложение и освобождает память
+		}
+	},
+	beforeCreate: function(){
+		console.log('Before create');
+	}
+	created: function(){
+		console.log('Created');
+	}
+	beforeMount: function(){
+		console.log('Before mount');
+	},
+	mounted: function(){
+		console.log('Mounted');
+	},
+	beforeUpdate: function(){
+		console.log('Before update');
+	},
+	updated: function(){
+		console.log('Updated');
+	},
+	beforeDestroy: function(){
+		console.log('Before destroy');
+	},
+	destroyed: function(){
+		console.log('Destroyed');
+	}
+});
+</script>
+
+Зачем нужен CLI.
+Позволяет разворачивать проекты на vue.js. При создании приложения код организуется в соответствии с определенной структурой. Код разбивается на компонеты и файлы, т.е. делается декомпозиция. Проекты сгенерированные с помощью cli поддерживают автоперезагрузку (hot reload - перезагрузка страницы в браузере при изменении файла на диске), перезагрузку модулей, препроцессоры, готовый сервер для работы с апи... Для работы требуется node.js.
+
+Установка CLI и создание проекта.
+https://github.com/vuejs/vue-cli/tree/master
+$ npm install -g vue-cli
+
+создание проекта
+vue init <template-name> <project-name>
+<project-name> - название проекта, так будет называться папка которую создаст vue cli
+<template-name> - шаблон проекта, существует несколько стандартных шаблонов.
+
+vue init webpack-simple vue-project
+
+
+Структура проекта.
+package.json - используемые npm пакеты.
+- dependences -  production зависимости. 
+- devDependences - пакеты для разработки.
+-? scripts - скрипты dev и build. dev - нужен чтобы запустить разработку приложения. Build - нужен чтобы собрать приложение без модулей, библиотек и с минифицированием кода.
+.babelrc - отвечает за компиляцию в EcmaScript 6. Показывает какие правила нужно учитывать при компиляции.
+.editorconfig - в разных редакторах разные правила редактирования, чтобы проект писался в одном стиле в этом файле содержатся общие настройки: величина отступов, символ табуляции (пробел или tab) и т.д.
+.gitignore - говорит какие файлы не нужно включать в систему контроля версий.
+index.html - мастер страница.
+webpack.config.js
+src - исходный код приложения.
+main.js - Основной файл, который запускает приложение.
+App.vue - компонент где описана логика приложения.
+Файл формата *.vue содержит 3 секции:
+- <template></template> - html шаблон. Обязательный.
+- <script></script> - js код. Не обязательный.
+- <style></style> - стили компонента. Не обязательный.
+
+Для запуска проекта нужно воспользоваться скриптами, которые описаны в файле package.json.
+Перейти в папку проекта (папка в которой лежит package.json).
+npm run dev
+
+Как запускается приложение.
+main.js - точка входа в приложение
+import Vue from 'vue';
+import App from './App.vue'; // импорт компонента App
+new Vue({
+	el: '#app', // <div id="app"></div> находится в файле index.html
+	render: h => h(App)
+});
+
+render - функция, которая принимает другую функцию h как параметр. В функцию h в качестве параметра передается vue компонет. Этот компонент будет отрисован в <div id="app"></div>, т.е. с него начнется работа приложения.
+render - ключевое слово, которое есть в объекте конфигурации vue. Это функция, которая позволяет рендерить (или запускать) все приложение.
+
+render: function(h){
+	return h(App);
+}
+
+App.vue
+<template>
+	<h1>{{ msg }}</h1> // шаблон
+</template>
+<script>
+// конструкция es 6
+export default { // экспорт объекта
+	data(){
+		return {
+			msg: 'Welcome to Your Vue.Js App'
+		};
+	}
+}
+</script>
+export default  - экспортирует объект. В данном случае это объект конфигурации vue или отдельные компоненты.
+Далее этот объект импортируется при помощи webpack лоадеров. При этом Webpack соединяет объект и шаблон.
+import App from './App.vue'; 
+Мы получаем App - объект конфигурации со встроенным шаблоном.
+
+
+Компоненты.
+Зачем нужны компоненты.
+Допустим нужно сделать два независимых counter'a. Можно просто скопировать код.
+Чтобы избежать повторения кода были изобретены компоненты. Компоненты это некоторые переиспользуемые элементы сайта, работающие независимо друг от друга. Их можно связывать.
+
+Чтобы создать компонет в объекте vue есть специпльный метод component. Первый параметр - селектор при помощи которого в дальнейшем можно будет создать компонет и проинициализировать (название тега который будет использоваться), второй параметр - объект конфигурации, в котором должно быть поле template описывающее шаблон, и в отличии от обычного объекта конфигурации поле data должно быть функцией, которая возвращает значение поля data. Компоненты регистрируются до инициализации приложения. Компонент должен содержать в себе только один корневой элемент внутри тега template.
+
+<div id="app">
+	<div style="border: 1px solid black; padding: 10px"> <!-- Теперь четко видно границы элемента -->
+		<h2>Counter: {{ counter }}</h2>
+		<button @click="counter++">Add to counter</button>
+	</div>
+	<div style="border: 1px solid black; padding: 10px">
+		<h2>Counter: {{ counter2 }}</h2>
+		<button @click="counter2++">Add to counter</button>
+	</div>
+	
+	<my-counter></my-counter>
+	<my-counter></my-counter>
+	<my-counter v-for="c in 20"></my-counter>
+</div>
+<script>
+
+Vue.component('my-counter', {
+	// обратные кавычки позволяют сохранять форматирование и писать код на разных строках
+	template: ` 
+		<div style="border: 1px solid black; padding: 10px">
+			<h2>Counter: {{ counter }}</h2>
+			<button @click="add">Add to counter</button>
+		</div>
+	`,
+	data: function(){ // поле data должно быть функцией, которая возвращает значение поля data
+		return {
+			counter: 0
+		}
+	},
+	methods:{
+		add: function(){
+			this.counter++;
+		}
+	}
+});
+
+new Vue({
+	el: '#app',
+	data: {
+		counter: 0,
+		counter2: 0
+	}
+});
+</script>
+
+Метод data.
+Возвращает объект который содержит изолированные данные, которые нужны для компонента. Если бы поле data было объектом, то все компоненты ссылались бы на одни и теже данные (изменение в одном изменяло бы все компоненты), было бы нельзя работать с изолированным состоянием. Поэтому нужно писать функцию, которая возвращает новый объект. При конфигурировании vue можно было использовать data как объект, потому что это был единственный экземпляр, компоненты повторяются поэтому нужно использовать функцию.
+
+<script>
+var dataObj = {
+	counter: 0
+}
+Vue.component('my-counter', {
+	data: function(){
+		return dataObj; // возвращается ссылка на переменную, а не новый объект. В любом компоненте будет один и тот же объект.
+	}
+});
+</script>
+
+
+Локальная и глобальная регистрация.
+Допустим у нас два приложения. Компонент counter будет доступен в обоих приложениях, т.к. он был зарегистрирован в глобальном объекте Vue. Чтобы компоненты были доступны только в одном приложении их можно регистрировать локально в каждом экземпляре vue. Для этого есть специальное поле components - это объект в котором ключем является название компонента, а значением - объект конфигурации. Во vue.js есть возможность задавать названия компонентов в формате camelCase (слова идут друг за другом с большой буквы). При этом в шаблоне используются одинаково: 'my-counter' или myCounter => <my-counter></my-counter>.
+
+<div id="app">
+	<my-counter v-for="c in 2"></my-counter>
+</div>
+<hr>
+<div id="app2">
+	<my-counter></my-counter>
+</div>
+<script>
+
+var component = { // обеъкт конфигурации компонета counter
+template: ``,
+methods: ...
+}
+
+Vue.component('my-counter', { // Компонент зарегистрирован глобально и будет доступен во всех приложениях.
+// ...
+});
+
+new Vue({
+	el: '#app',
+	componets: { // регистрация локальных компонентов
+		'my-counter': component // название компонету можно задать используя строку
+	}
+});
+new Vue({
+	el: '#app2',
+	componets: { 
+		myСounter: component // второй способ задать название компоненту используя camelCase
+	}
+});
+</script>
+ 
+ 
+Регистрация компонентов в .vue.
+Чтобы легко следить за состоянием компонента, каждый компонент помещается в отдельный файл *.vue.
+Car.vue
+<template>
+	<div>
+		<h3>Name: {{ carName }}</h3>
+		<p>Year: {{ carYear }}</p>
+	</div>
+</template>
+<script>
+	export default {
+		data() { // тоже самое что data: function(){
+			return {
+				carName: 'Ford',
+				carYear: 2015
+			}
+		
+		}
+	}
+</script>
+
+Регистрация компонента.
+В название компонента всегда лучше добавлять префикс чтобы они не пересикались с названиями тегов html 5. Самый распространенный префикс: app.
+main.js
+import Car from './Car.vue'
+Vue.component('app-car', Car);
+
+Использование компонента.
+App.vue
+<template>
+	<div> <!-- в компоненте должен быть только один корневой элемент -->
+		<h1>{{ msg }}</h1>
+		<app-car></app-car>
+	</div>
+</template>
+
+Так же компонент можно регистрировать не глобально в файле main.js, а локально в компоненте App.vue.
+<script>
+	import Car from './Car.vue'
+	export default {
+		data: function(){
+			return {
+				msg: 'Welcome'
+			}
+		},
+		components: {
+			appCar: Car
+		}
+	}
+</script>
+
+Передача параметров компоненту.
+Связывать компоненты между собой. Будем отображать название машины в компоненте App и передавать его дочернему компоненту, чтобы компонент машины не знал какое имя ему выводить. Параметры в компонент передаются в теге. Принимаемаемые компонентом параметры описываются в поле props: массив в котором в качестве элементов названия входящих параметров.
+
+Валидация входящих параметров.
+Допустим будет свойство меняющие carName на обратный порядок букв. Если в компонент будет передаваться число, а не строка, то будет ошибка. Поэтому параметры нужно валидировать. Поле props может быть объектом: ключ - название парметра, значение - тип данных. Третий вариант определения props: вместо того чтобы указывать название класса в качестве типа входного параметра, можно расширить валидацию данного параметра.
+
+Передача параметров от дочернего компонента.
+Если менять поля (полученные через входные параметры) в дочернем компоненте, то в родительском изменений поля не будет. Так происходит потому что родительский компонент не уведомляется о том, что что-то изменилось. Для таких случаев нужно создавать кастомные события в дочерних компонентах и слушать их в родительских. У каждого компонента есть специальный метод $emit('название события которое будет прослушиваться', значения_для_передачи_в_другие_компонеты), который генерирует событие, которое должны слушать родительские компоненты.
+В родительском компоненте обработчик события принимает параметр $event.
+
+Передача функции как параметра.
+Альтернативный способ взаимодействия между компонентами: передавать функцию из родительского компонента в дочерний. Из родительского компонента App будет передаваться функция changeNameToAudi в дочерний компонент Car в качестве параметра changeFunc, чтобы изменить название.
+
+Связь дочерних компонентов.
+В компоненте car будет кнопка увеличивающая значение счетчика в компоненте Counter. Чтобы связать компоненты создается метод updateCounter в компоненте Car, который генерирует событие counterUpdated. Событие обрабатывается в родительском компоненте App. Для этого необходимо создать переменную со значение счетчика (counter) во всех компонентах. 
+Использование event emitter.
+Другой способ использовать шину событий. Для этого в файле main.js создается event emitter. В компоненте Car вызывается событе eventEmitter.$emit('counterUpdated') при этом передавать новое значение счетчика не нужно, следовательно не нужно поле counter в компонентах Car и родительском компоненте App и не нужно его передавать из App в Car, оно остается только в компоненте Counter, но уже не в виде props, а в поле data. Чтобы прослушивать событие counterUpdated, создается обработчик события в методе created (компонент создан, но не заложен в дом дерево) компонента Counter: eventEmitter.$on('evnet_name', handler), handler - функция обработчик события. 
+Если вместе с событием нужно передавать данные, они передаются вторым параметром:
+eventEmitter.$emit('counterUpdated', 3);
+eventEmitter.$on('counterUpdated', (num) => {
+			this.counter += num;
+		});
+Есть более удобные способы взаимосвязи компонентов.
+
+Car.vue
+<template>
+	<div class="car">
+		<h3>Name: {{ carName }} \ {{ reverseName }}</h3>
+		<p>Year: {{ carYear }}</p>
+		<button @click="changeName">Change Name</button>
+		<button @click="changeFunc">Change from parent</button>
+		<button @click="updateCounter">Update Counter</button>
+	</div>
+</template>
+<script>
+	import { eventEmitter } from './main'; // фигурные скобки указываются потому что в файле main.js не экспортируется что-либо по дефолту, а используется обычный экспорт, поэтому при импорте используется декомпозиция объекта
+
+	export default {
+		props: ['carName', 'carYear'], // входные параметры компонента
+		// второй способ описания параметров с указанием типа данных
+		props: {
+			carName: String, // String - название класса, которок есть в javascript'e
+			carYear: Number
+		},
+		// Третий вариант определения props
+		props: {
+			carName: {
+				type: String,
+				required: true,
+				default: 'Default name'
+			},
+			carYear: Number,
+			changeFunc: Function,
+			counter: Number
+		},
+		methods: {
+			changeName() {
+				this.carName = 'Mazda';
+				this.$emit('nameChanged', this.carName); // уведомляем другие компоненты что имя изменилось
+			},
+			updateCounter() {
+				this.$emit('counterUpdated', this.counter + 1); // первый способ связи дочерних компонентов
+				
+				// второй способ с исппользованием шины событий (event emitter'a)
+				eventEmitter.$emit('counterUpdated');  // не нужно передавать новое значение потому что не нужно синхронизировать три компонента
+			}
+		},
+		computed: {
+			reverseName() {
+				return this.carName.split('').reverse().join('');
+			}
+		}
+	}
+</script>
+<style>
+	.car {
+		border: 1px solid black;
+	}
+	.car h3 {
+		margin-bottom: 5px;
+	}
+</style>
+
+Counter.vue
+<template>
+	<h1>Counter: {{ counter }}</h1>
+</template>
+<script>
+import { eventEmitter } from './main';
+export default {
+	proprs: ['counter'], // первый способ связи компонентов.
+	data(){
+		return {
+			counter: 0	// второй способ связи компонентов
+		}
+	},
+	created(){
+		// прослушка события 
+		eventEmitter.$on('counterUpdated', () => {
+			this.counter++;
+		});
+	}
+}
+</script>
+
+
+App.vue
+<template>
+	<div>
+		<h1>Parent: {{ carName }}</h1>
+		<app-counter :counter="counter"></app-counter>
+		<app-car 
+			v-bind:carName="carName" 			// <!-- Передача параметра carName -->
+			v-bind:carYear="carYear"
+			v-bind:counter="counter" 		// параметр для связи с компонентом Counter
+			v-bind:changeFunc="changeNameToAudi" // передача функции в дочерний компонент
+			v-on:nameChanged="carName = $event" // обработчик события дочернего компонента
+			v-on:counterUpdated="counter = $event" 
+		></app-car> 
+	</div>
+</template>
+<script>
+	import Car from './Car.vue'
+	import Counter from './Counter.vue'
+	export default {
+		data: function(){
+			return {
+				carName: 'Ford from parent',
+				//carName: 1000, - ошибка в компоненте: this.carName.split is not a function
+				// если в компоненте параметры определены с типом данных, то ошибка будет другая: type check failed for prop "carName". Expected String, got Number
+				carYear: 2018,
+				counter: 0 // Параметр передаваемый в компоненты Car & Counter для их связи
+			}
+		},
+		methods: {
+			changeNameToAudi(){ // функция передаваемая в дочерний компонент
+				this.carName = 'Audi';
+			}
+		},
+		components: {
+			appCar: Car,
+			appCounter: Counter
+		}
+	}
+</script>
+
+main.js
+import Vue from 'vue'
+import App from './App.vue'
+
+// использование шины событий
+// т.к. данная костанта будет использоваться в компонентах, необходимо чтобы она существовала до определения всего приложения.
+export const eventEmitter = new Vue(); // в классе Vue мы получаем доступ к событиям emit и on
+
+new Vue({
+	el: '#app',
+	render: h => h(App)
+});
+
+
+Изолированные стили.
+Компоненты Car и Counter имеют одинаковую разметку (див в который вложены заголовок и параграф). Если задать стили в для дива в компоненте Car, то они применятся ко всем дивам и в других компонентах. Т.е. все стили задаются глобально. У тега style есть специальный атрибут scoped, использовав который можно ограничить стили одним компонентом.
+Это достигается путем добавление во все теги компонента специального атрибута data-v-{id} (для всех тегов имеет одно и тоже значение). Этот атрибут добавляется в css селекторе.
+App.vue
+<template>
+	<div>
+		<app-counter></app-counter>
+		<app-car></app-car> 
+	</div>
+</template>
+<script>
+	import Car from './Car.vue'
+	import Counter from './Counter.vue'
+	export default {
+		components: {
+			appCar: Car,
+			appCounter: Counter
+		}
+	}
+</script>
+
+Car.vue
+<template>
+	<div>
+		<h2>Car</h2>
+		<p>Some text</p>
+	</div>
+</template>
+<script>
+export default {
+		
+}
+</script>
+<style>
+div { /* стиль применится ко всем дивам и в других компонентах */
+	border: 1px solid black;
+}
+</style>
+
+Counter.vue
+<template>
+	<div>
+		<h2>Counter</h2>
+		<p>Some text 10 words</p>
+	</div>
+</template>
+<script>
+export default {
+}
+</script>
+<style scoped> /* данные стили будут применены локально только к данному компоненту */
+	h2 {
+		color: red;
+	}
+</style>
+
+Передача HTML компоненту.
+Для этого HTML нужно разметсить внутри тега компонента. В компоненте нужно указать куда он будет вставляться тегом <slot name="id">. Можно вставлять разметку в разные места дочернего компанента, т.е. в слоты с разным name. При передачи разметки ей указывается атрибут slot="id". В передаваемом Html могут использоваться переменные, перед передачей шаблона в компонент vue заменит интерполяцию значением переменной и передаст готовую разметку в компонент. Изолированные стили компонента App будут применены к разметке передаваемой в дочерний элемент Car. Так же к этой разметке будут применяться и изолированные стили самого компонента Car. Это достигается добавлением двух атрибутов data-v-{id} к тегам в разметке.
+App.vue
+<template>
+	<div>
+		<app-car>
+			<h2 slot="title">{{carName}} + html</h2>
+			<p slot="text">Some text</p>
+		</app-car> 
+	</div>
+</template>
+<script>
+import Car from './Car.vue'
+export default {
+	data() {
+		return {
+			carName: 'Ford'
+		}
+	},
+	components: {
+		appCar: Car
+	}
+}
+</script>
+<style scoped>
+	h2 {
+		color: red;
+	}
+</style>
+Car.vue
+<template>
+	<div>
+		<slot name="title"></slot>
+		<hr>
+		<hr>
+		<slot name="text"></slot>
+	</div>
+</template>
+<script>
+export default {
+}
+</script>
+<style scoped>
+div { 
+	border: 1px solid black;
+	padding: 10px;
+}
+h2 {
+	font-style: italic;
+}
+</style>
+
+
+Директивы.
+<h2 v-{название}:{аргумент}.{модификатор1}.{модификатор2}="параметр"></h2>
+Создание своей директивы.
+Директивы это специальные атрибуты, которые могут использоваться внутри HTML шаблона чтобы взаимодействовать с html-тегами: v-on, v-bind. Директиве передаются аргументы через двоеточие: v-on:click. 
+Регистрация директивы: Vue.directive('название', объект конфигурации); 
+Обращение к директиве перед названием добавляется v-: <h2 v-{название}></h2>
+Взаимодействие с элементом - При инициализации директивы в метод bind передается элемент к которому привязана директива: el.style.color = 'red';.
+Жизненный цикл директивы.
+Директива состоит из методов, которые являются различными жизненными этапами в создании и инициализации директивы. 
+bind(el, bindings, vnode) - вызывается когда директива инициализируется, привязывается к элементу внутри виртуального дома. el - элемент к которому привязывается директива, bindings - свойства, передаваемые в директиву, vnode - virtual node, содержит объект виртуального дерева где будет хранится элемент директивы. bindings, vnode - read only параметры.
+inserted(el, bindings, vnode) - директива находится в дом дереве.
+update(el, bindings, vnode, oldVnode) - вызывается когда что-то изменяется в дом дереве, что затрагивает директиву (когда обновляется родительский компонент, но дочерние не обновились). oldVnode - старая виртуальная нода, до обновления директивы. 
+componentUpdated(el, bindings, vnode, oldVnode) - вызывается после метода update, если обновились дочерние элементы, которые присутствуют у директивы.
+unbind - вызывется когда директива убирается из дом дерева.
+
+color.js
+export default {
+	bind(el, bindings, vnode) {
+		console.log('bind');
+		el.style.color = 'red';
+	},
+	inserted(el, bindings, vnode) {
+		console.log('inserted');
+	},
+	update(el, bindings, vnode) {
+		console.log('update');
+	},
+	componentUpdated(el, bindings, vnode, oldVnode) {
+		console.log('componentUpdated');
+	},
+	unbind(){
+		console.log('unbind');
+	}
+}
+
+main.js
+import ColorDirective from './color'
+
+// регистрация директивы
+Vue.directive('colored', ColorDirective);
+
+App.vue
+<template>
+	<div>
+		<h2 v-colored v-if="visible">{{ title }}</h2>
+		<button @click="visible = !visible">Toggle</button>
+		<button @click="title = 'New title'">Change title</button>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			title: 'Hello I am Vue!',
+			visible: true
+		}
+	}
+}
+</script>
+<style scoped>
+
+</style>
+
+Параметры в директивах.
+Параметры передаются следующим образом v-directive_name="param"
+<h2 v-colored="'green'">{{ title }}</h2>
+Чтобы считать параметры из шаблона нужно обратиться к свойству bindings.value
+
+Аргументы в директивах.
+Значение после двоеточия в определении директивы называется аргументом. Например click аргумент в v-on:click
+В качексьве аргумента будет передаваться свойство, к которому нужно применить цвет.
+Получение доступа к аргументу в директиве: const arg = bindings.arg - здесь хранится строка указанная после двоеточия.
+
+Модификаторы.
+Передаются через точку: v-{названиеДирективы}:{аргумент}.{модификатор1}.{модификатор2}
+<button v-on:click.prevent.stop="">Button</button>
+Реализуем модификатор font который будет устанавливать размер шрифта в 30px.
+Чтобы получить доступ к переданным модификаторам в директиве нужно обратиться к свойству bindings.modifiers - в этом объекте содержатся модификаторы в виде свойств. Модификатор в директиве принимает булевсое значение. Передан модификатор font => есть свойство bindings.modifiers.font с значением true. Желательно обращаться к названиям передаваемых модификаторов через строговое значение: bindings.modifiers['font'], потому что при компиляции есть вероятность того что название может сократиться. Например при минификации кода, а нам нужно полное совпадение названия модификатора в директиве и в шаблоне. 
+
+Локальная регистрация.
+Используется для регистрации директивы в компоненте при помощи поля directives - это объект в котором ключ - название директивы, значение - объект конфигурации. Регистрация происзодит аналогично регистрации компонентов в  свойстве components (те же правила именования).
+
+<script>
+color.js
+export default {
+	bind(el, bindings, vnode) {
+		el.style.color = bindings.value; // считывание значения переданного в директиву
+		
+		const arg = bindings.arg;	
+		el.style[arg] = bindings.value; // изменение цвета свойства переданного в аргументе
+		
+		// считывание значения модификатора
+		const fontModifier = bindings.modifiers['font'];
+		if (fontModifier) {
+			el.style.fontSize = '30px';
+		}
+		
+		const delayModifier = bindings.modifiers['delay']; // название модификатора долно совпадать с указанным в шаблоне, поэтому обращение через строку.
+		let delay = 0;
+		if (delayModifier) {
+			delay = 2000;
+		}
+		
+		setTimeout(() => {
+			const arg = bindings.arg;	
+			el.style[arg] = bindings.value;
+		}, delay);
+	}
+}
+
+main.js
+import ColorDirective from './color'
+
+// глобальная регистрация директивы для всего проекта
+Vue.directive('colored', ColorDirective);
+</script>
+
+App.vue
+<template>
+	<div>
+		<h2 v-colored="'green'">{{ title }}</h2> <!-- Передача параметра -->
+		<h2 v-colored:background="'green'">{{ title }}</h2> <!-- Передача аргумента и параметра -->
+		<h2 v-colored:color="'blue'">{{ title }}</h2>
+		<h2 v-colored:background.font="'green'">{{ title }}</h2> <!-- Указание модификатора font -->
+		<h2 v-colored:color.delay.font="'blue'">{{ title }}</h2>
+		
+		<h2 v-font-directive>Local font directive</h2>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			title: 'Hello I am Vue!',
+		}
+	},
+	directives:{ // локальная регистрация директив
+		'font-directive': {
+			bind(el, bindings, vnode){
+				el.style.fontsize = '40px';
+			}
+		},
+		fontDirective:{ // название в camelCase
+		}
+	}
+}
+</script>
+
+Фильтры и Миксины.
+
+
