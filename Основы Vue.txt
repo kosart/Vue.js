@@ -975,6 +975,11 @@ Vue.filter({название-фильтра}, {фунция});
 Фильтрация списков.
 Фильтр может применяться к массиву: <li v-for="name of names | filter">, но так лучше не делать. В vue.js есть лучшее решение, позволяющее оптимизировать приложение. Нужно воспользоваться computed свойством, которое заранее будет знать, что оно будет зависить от двух элементов (names и searchName) => фильтрация будет вызываться только при изменении этих двух элементов.
 
+Использование миксинов.
+Позволяют избежать дублирование кода в разных компонентах с одинаковой функциональностью. В нашем примере это фильтрация списка (компонент List.vue). Общий код выносится в отдельный js файл и затем импортируется в нужных местах. Для регистрации миксина в vue компоненте есть специальное свойство mixins - это массив элементы которого - миксины. После регистрации компонент может использовать в шаблоне свойства и методы определенные в миксине. Vue.js мержит значения из миксина и компонента и при конфликте приоритет получают свойства из компонента.
+Если миксин зарегистрировать глобально он будет применен ко всем компонентам.
+
+
 App.vue
 <template>
 	<div>
@@ -987,6 +992,10 @@ App.vue
 		<ul>
 			<li v-for="name of filteredNames">{{ name }}</li> <!-- Фиильтр использовать не нужно потому что есть более оптимальное решение в виде computed метода -->
 		</ul>
+		
+		<hr>
+		
+		<app-list></app-list>
 	</div>
 </template>
 <script>
@@ -1011,19 +1020,104 @@ export default {
 		}
 	}
 }
+
+// второй способ с использованием миксина.
+import ListMixin from './listMixin'
+export default {
+	data() {
+		return {
+			title: 'Hello I am Vue!',
+		}
+	},
+	mixinss: [ListMixin],
+	filters: { // в объекте filters регистрируются локальные фильтры
+		lowercase(value){ 				// каждый фильтр это отдельная функция
+			return value.toLowerCase();	// которая возвращает строку или другой объект валидный для использования в шаблоне
+		}
+	}
+}
 </script>
+
+List.vue
+<template>
+  <div>
+	<h1>List</h1>
+	<input type="text" v-model="searchName" >
+		<ul>
+			<li v-for="name of filteredNames">{{ name }}</li> <!-- Фиильтр использовать не нужно потому что есть более оптимальное решение в виде computed метода -->
+		</ul>
+  </div>
+</template>
 <script>
+// первый вариант: без миксина
+export default {
+	data() {
+		return {
+			searchName: '',
+			names: ['Vlad', 'Max', 'Elena', 'Igor']
+		}
+	},
+	computed: {
+		filteredNames() { 
+			return this.names.filter(name => {
+				return name.toLowerCase().indexOf(this.searchName.toLowerCase()) !== -1;
+			});
+		}
+	},
+}
+
+// второй способ с использованием миксина.
+import ListMixin from './listMixin'
+
+export default {
+	mixins: [ListMixin] // регистрация миксина
+}
+
+</script>
+
+<script>
+listMixin.js
+// миксин экспортирует тот же объект что был в компоненте List.vue
+export default {
+	data() {
+		return {
+			searchName: '',
+			names: ['Vlad', 'Max', 'Elena', 'Igor']
+		}
+	},
+	computed: {
+		filteredNames() { 
+			return this.names.filter(name => {
+				return name.toLowerCase().indexOf(this.searchName.toLowerCase()) !== -1;
+			});
+		}
+	},
+}
+
 main.js
 import Vue from 'vue'
 import App from './App.vue'
+import List from './List.vue'
 
 // глобальная регистрация фильтра
 Vue.filter('uppercase', (value) => { 
 	return value.toUpperCase(); 
 });
-</script>
 
-Использование миксинов.
+Vue.component('app-list', List);
+
+// глобальная регистрация миксина, т.о. данный миксин будет применен ко всем компонентам
+Vue.mixin({
+	beforeCreate(){
+		console.log('beforeCreate');
+	}
+});
+
+new Vue({
+	el: '#app',
+	render: h => h(App)
+});
+</script>
 
 
 
