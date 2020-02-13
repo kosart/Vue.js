@@ -1120,14 +1120,116 @@ new Vue({
 </script>
 
 
+Работа с формами.
+Текстовый инпут.
+Модификатор lazy - меняется событие по которому меняктся инпут, изначально было событие input - реагирует на любое изменение состояния, с модификатором событие меняется на change - событие вызывается когда произошло событие change, в нашем случае это убирание фокуса с инпута
+
+<input type="text" v-model="name">
+<input type="text" v-model.lazy="name">
+<p>{{ name }}</p>
+export default {
+	data() {
+		return {
+			name: 'Initial state'
+		}
+	}
+}
+
+Текстарея.
+При взятии введенного значения из textarea будет утрачено форматирование (переход на новую строку). Существует специальный стиль который можно применить чтобы сохранить форматирование. В модели сохраняются переносы строк, но это не учитывается в параграфе(<p></p>). Чтобы это исправить ему нужно задать стиль white-space: pre; он позволяет отображать переносы строк заданные внутри модели.
+
+<template>
+	<div>
+		<textarea>{{ textarea }}</textarea>
+		<textarea v-model="textarea"></textarea> 
+		
+		<p>{{textarea}}</p> <!-- Форматирование утрачено -->
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			textarea: 'Initial text'
+		}
+	}
+}
+</script>
+<style scoped>
+textarea {
+	height: 100px;
+	width: 400px;
+}
+p {
+	white-space: pre;
+}
+</style>
 
 
+Чекбоксы.
+Vue.js заводит один массив, который отвечает за однотипные чекбоксы. Если значение чекбокса находися в массиве это означает, что он выбран, не находится - не выбран. Чтобы определить значение нужно написать html5 атрибут value="значение". Затем определить массив в котором будут храниться значения и привязать его к чекбоксам директивой v-model.
 
+<template>
+	<div>
+		<h2>Form inputs</h2>
+		
+		<label>
+			<input type="checkbox" value="instagram" v-model="social"> Instagram
+		</label>
+		<label>
+			<input type="checkbox" value="vk" v-model="social"> Vk
+		</label>
+		<label>
+			<input type="checkbox" value="facebook" v-model="social"> Facebook
+		</label>
+		
+		<hr>
+		
+		<ul>
+			<li v-for="s in social">{{s}}</li>
+		</ul>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			social: ['vk']
+		}
+	}
+}
+</script>
 
+Радио кнопки.
+Аналогичны чекбоксам, только модель это не массив, а строка, т.к. можно выбрать только одно значение. Используя vue.js можно не задавать атрибут name, который обычно задается у однотипных радиокнопок. Здесь для однотипных радиокнопок задается одинаковая модель.
 
+<template>
+	<div>
+		<h2>Form inputs</h2>
+		
+		<label>
+			<input type="radio" value="instagram" v-model="social"> Instagram
+		</label>
+		<label>
+			<input type="radio" value="vk" v-model="social"> Vk
+		</label>
+		<label>
+			<input type="radio" value="facebook" v-model="social"> Facebook
+		</label>
+		
+		<hr>
+		
+		<p>{{social}}</p>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			social: 'facebook'
+		}
+	}
+}
+</script>
 
-
-
-
-
-
+Селекты.
