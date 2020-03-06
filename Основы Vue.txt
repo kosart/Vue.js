@@ -1233,3 +1233,1375 @@ export default {
 </script>
 
 Селекты.
+Выбор значения:
+- с помощью атрибута selected: 
+<option v-for="s in socialsList" :selected="s == social">{{s}}</option>
+- v-model:
+<select v-model="social">
+	<option v-for="s in socialsList">{{s}}</option>
+</select>
+
+<template>
+	<div>
+		<h2>Form inputs</h2>
+		
+		<select v-model="social">
+			<option v-for="s in socialsList">{{s}}</option>
+		</select>
+		
+		<hr>
+		
+		<p>{{social}}</p>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			social: 'facebook',
+			socialsList: ['intagram', 'vk', 'facebook']
+		}
+	}
+}
+</script>
+
+Числовой модификатор.
+Если указать модификатор number, то vue будет автоматически приводить значение к числовому типу. Если модель нельзя привести к числу (вводить не числовые символы), то модель не будет обновляться (и watch метод вызываться не будет).
+
+<template>
+	<div>
+		<h2>Form inputs</h2>
+		
+		<input type="text" v-model.number="age">
+		
+		<hr>
+		
+		<p>{{age}}</p>
+	</div>
+</template>
+<script>
+export default {
+	data() {
+		return {
+			age: 20,
+		}
+	},
+	watch: {
+		age(value) {
+			console.log(value);
+			console.log(typeof value); // string, если в директиве указан модификатор number, то тип будет number
+		}
+	}
+}
+</script>
+
+Создание своего контрола.
+Значение передаваемое в компонент через v-model будет в props: ['value']. Чтобы директива v-model изменила значение модели когда оно меняется в компоненте нужно вызвать зарезервированное событие 'input' в компоненте: this.$emit('input', newValue);
+
+Onoff.vue
+<template>
+	<div>
+		<button 
+			class="on" 
+			:class="{'active': value}"
+			@click="onChange(true)"
+		>On</button>
+		<button 
+			class="off" 
+			:class="{'active': !value}"
+			@click="onChange(false)"
+		>Off</button>
+	</div>
+</template>
+<script>
+export default {
+	props: ['value'],
+	methods: {
+		onChange(newValue){
+			this.$emit('input', newValue);
+		}
+	}
+}
+</script>
+<style scoped>
+button {
+	border: none;
+	padding: 5px 15px;
+	cursor: pointer;
+	margin-right: 20px;
+	outline: none;
+}
+button:active {
+	box:shadow: inset 1px 1px 2px rgba(0,0,0,.5);
+}
+.on.active {
+	background: green;
+	color: #fff;
+}
+.off.active {
+	background: red;
+	color: #fff;
+}
+</style>
+
+App.vue
+<template>
+	<div>
+		<h2>Form inputs</h2>
+		
+		<app-onoff v-model="switched"></app-onoff>
+		<div>
+			<h3 v-if="switched">Componet is enabled</h3>
+			<h3 v-else>Componet is disabled</h3>
+		</div>
+	</div>
+</template>
+<script>
+import Onoff from './Onoff.vue'
+export default {
+	data() {
+		return {
+			switched: false
+		}
+	},
+	components: {
+		appOnoff: Onoff
+	}
+}
+</script>
+
+
+Валидация форм с vuelidate.
+Установка и настройка проекта.
+1 Установка bootstrap
+2 установить пакет отвечающий за валидацию: Vuelidate
+npm install vuelidate --save
+Импортировать библиотеку в main.js: import Vuelidate from 'vuelidate';
+Подключить библиотеку/плагин в vue.js: Vue.use(library_plugin);
+Теперь у каждого инстанса vue будет специальное поле validations, которое позволит работать с валидацией. Это объект в котором ключи это названия валидируемых полей, значение - валидаторы для данного поля { key: validator }. Валидаторы можно найти на оф сайте в разделе builtin validators.
+validations: {
+    email: {
+      required
+	}
+}
+Чтобы использовать валидатор его необходимо привязать внутри шаблона с помощью прослушки событий: нужно поставить какое-либо событие, например input - это событие слушается директивой v-model, и в него нужно передать инициализацию валидации: @input="$v.{валидируемое_поле}.$touch()", $v - специальная переменная, которая отвечает за все валидации, которые есть в компоненте, $touch() - метод который запускает инициализацию валидации:  <input type="email" @input="$v.email.$touch()" v-model="email">
+Т.к. используется событие input - валидация происходит при каждом изменении поля (ввод символа). Хорошей практикой является делать валидацию при потере фокуса: @blur="$v.email.$touch()"
+
+Объект $v:
+{
+  "email": { // поля относящиеся к отдельному инпуту
+	"required": false, // false - значит валидация не прошла, required - название валидатора указанное в поле
+					   // validations компонента
+	"$invalid": true,  // есть ли ошибка валидации
+	"$dirty": false, // изменялось ли значение в инпуте
+	"$error": false, // есть ли ошибка, изначально ошибок нет, при изменении поля будет показвыть состояние валидации
+	"$pending": false, // предназначено для синхронных валидаторов
+	"$params": { // параметры валидаторов, например для валидатора длины строки здесь будет указана длина
+	  "required": {
+		"type": "required"
+	  }
+	}
+  },
+  "password": {
+    "$params": {
+	  "minLength": {
+		"min": 6	// минимальная длина строки, переданная при инициализации валидатора в validations
+	  }
+    }
+  }
+  "$invalid": true, // поля отвечающие за всю форму в данном компоненте
+  "$dirty": false,
+  "$error": false,
+  "$pending": false,
+  "$params": {
+  	"email": null
+  }
+}
+
+Визуальное отображение ошибок
+Для отображения состояния инпута будут использоваться bootstrap классы. Не валидным инпутам будет устанавливаться класс is-invalid.
+
+Создание своего валидатора.
+Асинхронный валидатор проверки уникальности email. Валидатор определяется в виде функции, принимаемый параметр - новое значение поля, возвращаемое значение должно указавыть валидно состояние (true) или нет (false). Когда для валидации нужно сделать запрос к серверу, можно вернуть из валидатора promise.
+validations: {
+    email: {
+      uniqEmail: function(newEmail){
+		if (newEmail === '') return true;
+		// эмуляция запроса к серверу
+		setTimeout(() => {
+		  const value = newEmail !== 'test@mail.ru';
+		  resolve(value);
+		}, 3000);
+	  }
+    }
+}
+
+Для отправки формы нужно добавить в нее обработчик события сабмит: @submit="onSubmit"
+
+index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>vue-project</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/dist/build.js"></script>
+  </body>
+</html>
+
+main.js
+import Vue from 'vue'
+import Vuelidate from 'vuelidate' // импорт библиотеки валидации
+import App from './App.vue'
+
+Vue.use(Vuelidate)
+
+new Vue({
+  el: '#app',
+  render: h => h(App)
+})
+
+App.vue
+<template>
+  <div class="container">
+    <form class="pt-3" @submit.prevent="onSubmit"> // prevent - чтобы форма не перезагружала страницу
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          class="form-control"
+		  :class="{'is-invalid': $v.email.$error}"
+		  @blur="$v.email.$touch()" // валидация происходит при потере фокуса
+          v-model="email"
+        >
+		<!-- Название поля валидации (required) в объекте валидируемого инпута $v.email ($v.email.required)
+			должно совпадать с названием (required) указанынным в validations для данного инпута (email) -->
+		<div class="invalid-feedback" v-if="!$v.email.required">Email field is required</div>
+        <div class="invalid-feedback" v-if="!$v.email.email">This field should be an email</div>
+		<div class="invalid-feedback" v-if="!$v.email.uniqEmail">This email is already exists</div>
+      </div>
+	  
+	  <div class="form-group">
+        <label for="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          class="form-control"
+          :class="{'is-invalid': $v.password.$error}"
+          @blur="$v.password.$touch()"
+          v-model="password"
+        >
+        <div class="invalid-feedback" v-if="!$v.password.minLength">
+          Min length of password is {{ $v.password.$params.minLength.min }}. Now it is {{ password.length }}.
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="confirm">Confirm password</label>
+        <input
+          type="password"
+          id="confirm"
+          class="form-control"
+          :class="{'is-invalid': $v.confirmPassword.$error}"
+          @blur="$v.confirmPassword.$touch()"
+          v-model="confirmPassword"
+        >
+        <div class="invalid-feedback" v-if="!$v.confirmPassword.sameAs">
+          Passwords should match
+        </div>
+      </div>
+	  <button class="btn btn-success" type="cubmit" :disabled="$v.$invalid">Submit</button>
+	  <pre>
+		{{ $v }}
+        {{ $v.email }}
+	  </pre>
+	  
+    </form>
+  </div>
+</template>
+
+<script>
+import { required, email, minLength, sameAs } from 'vuelidate/lib/validators'
+
+export default {
+  data () {
+    return {
+	  form: {
+	    password: ''
+	  }
+      email: '',
+	  password: '',
+	  confirmPassword: ''
+    }
+  },
+  methods: {
+	onSubmit() {
+	  console.log('Email', this.email);
+	  console.log('Password', this.password);
+	}
+  },
+  validations: {
+    email: {
+      required, // required: required, -  если в es6 ключ и значение объекта совпадают, то ключ можно не указывать
+      email, // будет использоваться в шаблоне: $v.email.email
+	  // кастомный валидатор
+	  uniqEmail: function(newEmail){ // newEmail - новое значение поля
+	    //return newEmail !== 'test@mail.ru';
+		return new Promise((resolve, reject) => {
+			if (newEmail === '') return true; // за валидация пустого значения отвечает вылидатор required, иначе будет задержка 3сек
+			// эмуляция запроса к серверу
+			setTimeout(() => {
+			  const value = newEmail !== 'test@mail.ru';
+			  resolve(value);
+			}, 3000);
+		});
+	  }
+    },
+    password: {
+      minLength: minLength(6) // валидаторы могут принимать параметры
+    },
+    confirmPassword: {
+      sameAs: sameAs('password'), // параметром передается название поле которое должно совпадать
+	  // так же можно передать функцию, которая будет обозначать, то поле, которое нужно проверять
+	  // это нужно чтобы обращаться к полям в отдельном объекте (к полю с любым уровнем вложенности)
+	  sameAs: sameAs((vue) => { // параметром передается инстас vue
+		return vue.form.password;
+	  })
+    }
+  }
+}
+</script>
+
+
+
+Роутинг с vue-router.
+Vue-router - дополнительный пакет, позволяющий делать навигацию между страницами. Страницами в vue.js являются компоненты.
+npm install vue-router --save
+import VueRouter from 'vue-router'
+Vue.use(VueRouter)
+Страницы отображаемые в зависимости от выбранного route будут хранится в папке pages. Регистрация роутов в отдельном файле routes.js:
+import VueRouter from 'vue-router'
+import componetName from './path/to/component'
+export default new VueRouter({ 
+  routes: [ 
+    {
+      path: 'path', 
+      component: componetName
+    }]
+})
+Роутер регистрируется в экземпляре приложения в поле router:
+import router from './routes'
+new Vue({
+  el: '#app',
+  render: h => h(App),
+  router: router // регистрация роутера
+})
+
+Чтобы указать куда рендерить определенный route используется тег <router-view></router-view> на его место будет рендерится компонент который соответствует текущему rout'y.
+В url присутствует хеш # и после него значение rout'a
+localhost:8080/#/cars
+Хеш можно убрать с помощью параметра в конфигурации роута: 
+mode: 'history' - браузер будет сохранять историю посещения различных ссылок.
+
+Создание навигации
+При таком методе при нажатии на ссылку страница будет перезагружаться: <a href="/cars">Cars</a>
+Чтобы использовать навигацию без перезагрузки страницы есть компонент router-link:
+<router-link class="nav-link" :to="'/cars'">Cars</router-link> - рендерится в тег <a>
+Атрибуты router-link:
+- tag - в него можно передать название тега который нужно использовать в качестве данного компонента(который заменит его).
+- active-class - css класс который будет добавляться если ссылка активна
+- exact - указывает что нужно точное совпадение адреса чтобы ссылка была активной, иначе совпадение роута будет учитываться по правилу contains 
+<router-link tag="li" class="nav-item" exact to="/cars" active-class="active">
+    <a class="nav-link">Cars</a>
+</router-link>
+
+Указание динамического параметра в роуте: '/car/:id'
+Получение значения из роута: this.$router.currentRoute.paramss['id']
+Если ссылки на страницу car будут идти из компонента App, то будет работать один переход на страницу, а другие ссылки не будут менять содержимое страницы. Так происходит потому что компонент уже инициализирован и vue не будет его рендерить заново (он уже и так отрисован). Чтобы исправить это нужно 
+watch: {
+  $route (toR, fromR) {
+    this.id = toR.params['id']
+  }
+}
+
+this.$route === this.$router.currentRoute - более короткая запись
+
+Программная навигация:
+this.$router.push('/url'); 
+пушим в массив истории браузера новую ссылку, браузер отобразит ссылку, при этом сохранится история
+
+Вложенные роуты.
+При нажатии на кнопку "Full info" на странице будет появляться полная информация о машине.
+Для объявления вложенных роутов в объекте route есть поле children - массив, элемент - route. Саброуту можно задавать имя, которое будет использоваться для формирования саброута.
+<router-link :to="{name: 'имя_саброута', params: {id: id}}"></router-link>
+
+{
+  path: '/car/:id',
+  component: Car,
+  hildren: [
+    {
+      path: 'full', // localhost:8080/car/10/full
+      component: CarFull,
+      name: 'имя_саброута'
+    }
+  ]
+}
+При этом в родительском компоненте Car нужно указать куда будут рендериться саброуты с помощью директивы router-view.
+
+Передача параметров. 
+Передача название и года в query параметрах:
+<router-link :to="{name: 'имя_саброута', params: {id: id}, query: {name: 'Mazda', year: 2000}}"></router-link>
+Считывание query параметров: {{ $route.query.имя_параметра }} {{ $route.query.name }}
+или 
+computed: {
+  year(){
+    return this.$route.query.year;
+  }
+}
+
+Хэш и скролл.
+Хэш - строковое значение, которое пишется через #
+localhost:8080/car/3/full?name=Mazda&year=2000#hash
+Служит для того, например, чтобы можно было переходить к определенным id. В качестве хэша указывается id элемента к которому нужно перейти. Например:
+localhost:8080/car/3/full?name=Mazda&year=2000#scroll
+перейдет к элементу с id=scroll: <h6 id="scroll">Hello from the bottom</h6>
+Нужно передать значение в параметр hash:
+<router-link :to="{name: 'имя_саброута', params: {id: id}, query: {name: 'Mazda', year: 2000}, hash: '#scroll'}"></router-link>
+и настроить скрол по странице в файле routes:
+scrollBehavior (to, from, savedPosition){
+	if (savedPosition){
+	  return savedPosition; // сохранить позицию скрола вместо перехода в начало страницы
+	}
+	
+	if (to.hash) {
+	  return { selector: to.hash };
+	}
+
+	return { // на какие координаты нужно перенести фокус окна браузера
+	  x: 0,
+	  y: 0
+	}
+}
+Возвращает объект, который говорит vue.js о том, куда нужно проскролить страницу.
+to - к какому rout'y переход
+from - с какого rout'а переход
+savedPosition - при переключении на другие страницы, не происходит перехода, javascript рендерит новые блоки, на одной и той же странице. Чтобы не терять позицую скрола при рендере новой страницы, используется параметр savedPosition.
+
+Редирект.
+{
+  path: '/none', 
+  redirect: '/cars' // редирект к роуту '/cars'
+  redirect: {
+	name: 'cars' // редирект к именованному роуту cars
+  }
+}
+redirect - можно указывать роут в виде строки, либо в именованный роут.
+
+Отображение ошибки 
+{
+  path: '*', // для всех не зарегистрированных роутов
+  component: ErrorCmp // страница 404
+}
+
+Защита роутов.
+Guards - позволяют сделать проверку можно ли нажать на данную ссылку (можно ли переходить по роуту).
+У каждого роута есть метод beforeEnter, он вызывается перед тем как зайти на роут и чтобы продолжить выполнение роутинга нужно вызвать функцию next(), чтобы отменить переход на роут нужно передать в next параметр false: next(false)
+beforeEnter(to, from, next){
+  console.log('beforeEnter');
+  if (пользователь_авторизован){
+    next(); // если не вызывать next(), то перехода на роут не будет (страница не будет рендериться)
+  } else {
+    next(false); // не осуществлять переход к роуту
+  }
+}
+to - роут куда переходим
+from - откуда переходим
+next - управляет переходом к роуту
+
+Второй способ контроля над роутингом.
+В компоненте есть два метода:
+- beforRouteEnter - вызывается перед тем как будет осуществлен переход по роуту;
+- beforeRouteLeave - вызывается перед тем как покинуть текуущий роут. Нужно например при заполнении формы переход с подтверждением, перед тем как покинуть страницу в диалоговом окне спрашивается "вы уверены?".
+beforeRouteEnter (to, fromR, next){
+  console.log('beforeRouteEnter');
+  next();
+}
+beforeRouteLeave (to, fromR, next) {
+  console.log('beforeRouteLeave')
+
+  if (window.confirm('Are you sure you want to leave?')) {
+    next()
+  } else {
+    next(false)
+  }
+}
+
+Ленивая загрузка.
+Приложение загружается следующим образом. Оно состоит из нескольких js файлов (vue файлов), при каждом изменении они собираются в один файл, включая vue.js модули.
+Можно сделать так чтобы отдельные компоненты загружались при переходе на новый роут, т.е. они исключены из общего файла. Приложение будет грузится быстрее, а остольные модули будут загружать только когда будет переход по их роуту.
+Webpack добавляет в общий файл компоненты которые импортированы в файле routes.js. Чтобы этого не происходило нужно удалить импорт компонента. При этом чтобы указать webpack'у откуда загружать данный компонент:
+
+const Cars = resolve => {
+  require.ensure(['./pages/Cars.vue'], () => { // указывается физический путь к файлу компонента в проекте
+    resolve(
+      require('./pages/Cars.vue') // путь к компоненту который нужно подгрузить
+    )
+  })
+}
+
+Фукцию resolve нужно вызвать когда загрузится определенный файл: resolve(requre('путь_к_компоненту')). Чтобы загрузить определенный файл используется функция require.ensure([путь_к_компоненту])
+
+Обычно ленивая загрузка используется для больших модулей, для оптимизации скорости загрузки всего приложения. 
+
+index.html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>vue-project</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/dist/build.js"></script>
+  </body>
+</html>
+
+<script>
+// main.js
+import Vue from 'vue'
+import App from './App.vue'
+import VueRouter from 'vue-router'
+import router from './routes'
+
+Vue.use(VueRouter)
+
+new Vue({
+  el: '#app',
+  render: h => h(App),
+  router // регистрация роутера
+})
+
+// routes.js
+import VueRouter from 'vue-router'
+import Home from './pages/Home'
+// import Cars from './pages/Cars' // не импортируем компонент Cars чтобы webpack не добавлял его в общий файл
+import CarFull from './pages/CarFull'
+import ErrorCmp from './pages/Error'
+
+const Cars = resolve => {
+  require.ensure(['./pages/Cars.vue'], () => {
+    resolve(
+      require('./pages/Cars.vue')
+    )
+  })
+}
+
+const Car = resolve => {
+  require.ensure(['./pages/Car.vue'], () => {
+    resolve(
+      require('./pages/Car.vue')
+    )
+  })
+
+export default new VueRouter({ // экспортируем новый экземпляр класса VueRouter, конструктор принимает объект конфигурации в качестве параметра
+  routes: [ // массив маршрутов приложения
+    {
+      path: '', // localhost:8080
+      component: Home
+    },
+    {
+      path: '/cars', // localhost:8080/cars, domain/path
+      component: Cars,
+	  name: 'cars'
+    },
+	{
+      path: '/car/:id',
+      component: Car,
+	  children: [
+        {
+          path: 'full', // localhost:8080/car/10/full
+          component: CarFull,
+          name: 'carFull',
+		  beforeEnter (to, from, next) { // guard
+            console.log('beforeEnter')
+            next()
+          }
+        }
+      ]
+    },
+	{
+      path: '/none', 
+      redirect: '/cars' // редирект
+	  redirect: {
+		name: 'cars' // редирект к именованному роуту cars
+	  }
+    },
+	{
+      path: '*', // для всех не зарегистрированных роутов
+      component: ErrorCmp
+    }
+  ],
+  mode: 'history', // убирает # из url
+  scrollBehavior (to, from, savedPosition){ // скролл к определенному хэшу
+	
+	if (savedPosition){
+	  return savedPosition; // сохранить позицию скрола вместо перехода в начало страницы
+	}
+	
+	if (to.hash) {
+	  return { selector: to.hash };
+	}
+
+	return { // на какие координаты нужно перенести фокус окна браузера
+	  x: 0,
+	  y: 700
+	}
+  }
+})
+
+</script>
+App.vue
+<template>
+    <div class="container">
+      <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav">
+            <li class="nav-item">
+              <router-link class="nav-link" to="/">Home</router-link>
+            </li>
+            <li class="nav-item">
+              <router-link class="nav-link" :to="'/cars'">Cars</router-link>
+            </li>
+			<router-link tag="li" class="nav-item" exact to="/" active-class="active">
+              <a class="nav-link">Home</a>
+            </router-link>
+            <router-link tag="li" class="nav-item" to="/cars" active-class="active">
+              <a class="nav-link">Cars</a>
+            </router-link>
+			
+			<router-link tag="li" class="nav-item" to="/car/3" active-class="active">
+              <a class="nav-link">Car 3</a>
+            </router-link>
+            <router-link tag="li" class="nav-item" to="/car/4" active-class="active">
+              <a class="nav-link">Car 4</a>
+            </router-link>
+			
+          </ul>
+        </div>
+      </nav>
+
+      <router-view></router-view>
+    </div>
+</template>
+
+<script>
+  export default {}
+</script>
+
+pages/home.vue
+<template>
+    <h1>Home page</h1>
+</template>
+
+<script>
+  export default {
+
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+pages/cars.vue
+<template>
+  <div>
+    <h1>Cars page</h1>
+
+    <ul>
+
+      <router-link
+        tag="li"
+        v-for="car in 5"
+        :to="'/car/' + car"
+        :key="car" // специальный ключ для оптимизации
+      >
+        <a>Car {{ car }}</a>
+      </router-link>
+
+    </ul>
+  </div>
+</template>
+
+<script>
+  export default {}
+</script>
+
+<style scoped>
+
+</style>
+
+pages/car.vue
+<template>
+    <h1>Car id {{ id }}</h1>
+	
+	<button class="btn btn-sm btn-default mb-2" @click="goBackToCars">Back</button>
+	<br>
+	<!-- Вложенные роуты -->
+    <router-link
+      class="btn btn-info mt-2"
+      tag="button"
+      :to="'/car/' + id + '/full'"
+    >
+      Full info
+    </router-link>
+	
+    <router-link
+      class="btn btn-info mt-2"
+      tag="button"
+      :to="{name: 'carFull', params: {id: id}}"
+    >
+      Full info
+    </router-link>
+	<!-- Передача query параметров -->
+	<router-link
+      class="btn btn-info mt-2"
+      tag="button"
+      :to="{name: 'carFull', params: {id: id}}, query: {name: 'Mazda', year: 2000}, hash: '#scroll'"
+    >
+      Full info
+    </router-link>
+    <hr>
+
+    <router-view></router-view>
+</template>
+
+<script>
+  export default {
+    data () {
+      return {
+        // id: this.$router.currentRoute.params['id'], // считывание значения парамтра id из роута
+        id: this.$route.params['id'] // 
+      }
+    },
+	methods:{
+	  goBackToCars(){
+	    this.$router.push('/cars'); // пушим в массив истории браузера новую ссылку, браузер отобразит ссылку
+	  }
+	},
+    watch: {
+      $route (toR, fromR) {
+        this.id = toR.params['id']
+      }
+    },
+	beforeRouteLeave (to, fromR, next) {
+      console.log('beforeRouteLeave')
+
+      if (window.confirm('Are you sure you want to leave?')) {
+        next()
+      } else {
+        next(false)
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+pages/carFull.vue
+<template>
+    <div>
+      <h4>Car name: {{ $route.query.name }}</h4>
+      <h5>Car year: {{ year }}</h5>
+	  
+	  <div class="scroll"></div>
+      <!-- переход к элементу с помощью хэша в url: /path#scroll -->
+      <h6 id="scroll">Hello from the bottom</h6>
+
+      <div class="scroll"></div>
+    </div>
+</template>
+
+<script>
+  export default {
+    computed: {
+	  year(){
+	    return this.$route.query.year;
+	  }
+	},
+	beforeRouteEnter (to, fromR, next){
+	  console.log('beforeRouteEnter');
+	  next();
+	}
+  }
+</script>
+
+<style scoped>
+  .scroll {
+    width: 100px;
+    height: 1000px;
+    background: #ccc;
+  }
+</style>
+
+pages/Error.vue
+<template>
+    <h1 style="color: red;">404 Error</h1>
+</template>
+
+<script>
+  export default {
+
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+
+Работа с сервером с vue-resource.
+Настройка приложения.
+Для работы с сервером в Vue.js можно использовать любую доступную библиотеку или писать нативный код. Например можно подключить jquery и использовать его ajax, или axious, которая позволяет удобно работать с ajax запросами. 
+Для использования с Vue.js была специально разработана библиотека, которая позволяет удобно работать с асинхронными запросами: vue-resource. 
+
+npm install vue-resource --save
+
+В качестве сервера можно взять готовое решение, например firebase, или локальным сервером для разработки json 
+server. 
+
+npm install -g json-server
+npm install --save-dev json-server
+
+Устанавливается глобально и локально для разработки проекта.
+
+package.json
+"scripts": {
+  "dev": "cross-env NODE_ENV=development webpack-dev-server --open --hot",
+  "build": "cross-env NODE_ENV=production webpack --progress --hide-modules",
+  "server": "json-server --watch db.json"  // запуск json-server
+}
+
+нужно создать файл db.json в корне проекта (в папке гда package.json)
+{
+  "cars": []
+}
+
+Для запуска приложения запускаем frontend: npm run dev
+Вторым процессом (в другом терминале) нужно запустить json-server: npm run server
+
+Создание объектов POST.
+this.$http.post('http://localhost:3000/cars', car)
+.then(response => {
+  return response.json() // возвращает данные созданного объекта без вспомогательной (технической) информации
+})
+.then(newCar => {
+  console.log(newCar)
+})
+Отправляется два запроса:
+1. OPTIONS - frontend проверял доступен ли сервер.
+2. POST - создание объекта.
+
+Получение объектов GET.
+this.$http.get('http://localhost:3000/cars')
+.then(response => {
+  return response.json()
+})
+.then(cars => {
+  this.cars = cars
+})
+Также в $http есть еще два метода:
+PUT - изменяет данные;
+DELETE - удаляет.
+
+Использование resource.
+vue-resource предоставляет инструмент удобный для работы с однотипными сущностями: $resource.
+created () {
+  this.resource = this.$resource('http://localhost:3000/cars')
+}
+
+Глобальная настройка.
+Установка базового url для всех запросов: Vue.http.options.root = 'http://localhost:3000/'
+
+Интерсепторы.
+Интерсепторы обрабатывают запросы отправляемые на сервер и могут их модифицировать (изменять method, headers ...).
+Например добавление токена аутентификации в каждом запросе:
+Vue.http.interceptors.push(request => {
+  request.headers.set('Auth', 'RAND TOKEN ' + Math.random())
+})
+
+<script>
+db.json
+{
+  "cars": [{
+      "name": "Ford",
+      "year": 2018,
+      "id": 1
+    },
+    {
+      "name": "Mazda",
+      "year": 2015,
+      "id": 2
+    }]
+}
+
+main.js
+import Vue from 'vue'
+import VueResource from 'vue-resource' // подключение библиотеки vue-resource
+import App from './App.vue'
+
+Vue.use(VueResource)  // использовать vue-resource
+
+Vue.http.options.root = 'http://localhost:3000/'
+
+Vue.http.interceptors.push(request => {
+  request.headers.set('Auth', 'RAND TOKEN ' + Math.random())
+})
+
+new Vue({
+  el: '#app',
+  render: h => h(App)
+})
+</script>
+
+App.vue
+<template>
+  <div class="container pt-2">
+    <div class="form-group">
+      <label for="name">Car name</label>
+      <input type="text" id="name" class="form-control" v-model.trim="carName">
+    </div>
+
+    <div class="form-group">
+      <label for="year">Car year</label>
+      <input type="text" id="year" class="form-control" v-model.number="carYear">
+    </div>
+
+    <button class="btn btn-success" @click="createCar">Create car</button>
+	<button class="btn btn-primary" @click="loadCars">Load cars</button>
+	
+	<hr>
+
+    <ul class="list-group">
+      <li
+        class="list-group-item"
+        v-for="car of cars"
+        :key="car.id"
+      >
+        <strong>{{ car.name }}</strong> - {{ car.year }}
+      </li>
+    </ul>
+  </div>
+</template>
+
+<script>
+  export default {
+    data () {
+      return {
+        carName: '',
+        carYear: 2018,
+		cars: [],
+		resource: null // будет использоваться для получения и создания машин
+      }
+    },
+    methods: {
+      createCar () {
+        const car = {
+          name: this.carName,
+          year: this.carYear
+        }
+
+        this.$http.post('http://localhost:3000/cars', car)
+          .then(response => {
+			console.log(response);
+            return response.json()
+          })
+          .then(newCar => {
+            console.log(newCar)
+          })
+      },
+	  loadCars () {
+        this.$http.get('http://localhost:3000/cars')
+          .then(response => {
+            return response.json()
+          })
+          .then(cars => {
+            this.cars = cars
+          })
+      },
+	  
+	  // создание и сохранение с использованием $resource
+	  createCar () {
+        const car = {
+          name: this.carName,
+          year: this.carYear
+        }
+
+        this.resource.save({}, car)
+      },
+      loadCars () {
+        this.resource.get().then(response => {
+		  console.log(response);
+		  response.json()
+		})
+        .then(cars => this.cars = cars)
+      }
+    },
+	created () {
+      this.resource = this.$resource('http://localhost:3000/cars')
+	  this.resource = this.$resource('cars') // если указан базовый url в глобальной конфигурации vue-resource
+    }
+  }
+</script>
+
+
+Работа с данными с vuex.
+Установка vuex.
+Имеется три компонента:
+App - родительский, передает counter в компонент Counter. Слушает кастомное событие counterUpdated компонента Actions и увеличивает значение counter на нужную величину;
+Counter - получает значение счетчика (counter) и выводит его;
+Actions - при клике на определенную кнопку эмитится событие counterUpdated с параметром 1 или -1.
+Взаимодействие дочерних комонентов происходит через родительский. Для решения данной проблемы можно использовать шину событий, но данная шины быстро засорится: при большом количестве взаимодействий будет много разных событий за которыми будет сложно уследить. Поэтому не подходит для больших приложений (можно запутаться в коде).
+Для решения данной проблемы в Vue.js имплиментирована логика redux в библиотеке vuex. Это дополнительный модуль, который предоставляет общую шину и общий state всего приложения. Это объект, который описывает состояние всего приложения. Все компоненты будут иметь к нему доступ (т.е. будут иметь доступ к общему состоянию приложения). Взаимодействие с данными будет осуществляться через прослойку - store.
+
+Установка: npm install vuex --save
+Чтобы его использовать создается новая папка store, в ней создается файл index.js. В этом файле нужно настроить объект store.
+
+<script>
+// src/main.js
+import Vue from 'vue'
+import App from './App.vue'
+import store from './store' // index.js можно не дописывать, webpack будет по умолчанию использовать файл index.js т.е. эквивалентно import store from './store/index.js'
+
+new Vue({
+  el: '#app',
+  store: store, // подключение store к приложению
+  render: h => h(App)
+})
+
+// src\store\index.js
+import Vue from 'vue'
+import Vuex from 'vuex'
+
+Vue.use(Vuex); // подключение плагина
+
+// нужно экспортировать результат работы конструктора библиотеки vuex
+export default new Vuex.Store({ // в конструктор передается объект конфигурации
+
+})
+
+</script>
+
+src/App.vue
+<template>
+  <div class="container text-center pt-5">
+    <app-counter :counter="counter"></app-counter>
+    <app-actions @counterUpdated="counter += $event"></app-actions>
+  </div>
+</template>
+
+<script>
+  import Counter from './Counter'
+  import Actions from './Actions'
+
+  export default {
+    data() {
+      return {
+        counter: 0
+      }
+    },
+    components: {
+      appCounter: Counter,
+      appActions: Actions
+    }
+  }
+</script>
+
+src/Counter.vue
+<template>
+    <h2>Counter {{counter}}</h2>
+</template>
+
+<script>
+  export default {
+    props: ['counter']
+  }
+</script>
+
+
+src/Actions.vue
+<template>
+    <div>
+      <button class="btn btn-success" @click="updateCounter(1)">Add</button>
+      <button class="btn btn-danger" @click="updateCounter(-1)">Subtract</button>
+    </div>
+</template>
+
+<script>
+  export default {
+    methods: {
+      updateCounter(val) {
+        this.$emit('counterUpdated', val)
+      }
+    }
+  }
+</script>
+
+
+Использование state.
+Теперь отрефакторим взаимодействие между дочерними компонентами.
+Конфигурация store
+// src\store\index.js
+export default new Vuex.Store({
+  state: { // описывает все состояние приложения
+    counter: 10
+  }
+})
+
+использование state
+src/Counter.vue
+computed: {
+  counter () {
+    return this.$store.state.counter
+  }
+}
+Теперь в компоненте App не нужно передавать параметр counter в компонент Counter: <app-counter></app-counter>
+
+Использование getters
+Если перед выводом с данными хранящимися в state нужно произвести вычисления (изменить эти данные) и эти данные используются в двух разных компонентах, то получается дублирование кода.
+return this.$store.state.counter * (7 - 2 * (5 + 4)) // дублирование кода
+Вычисление нужно сделать в store и отдать компонентам готовое значение. Для этого используются getters:
+export default new Vuex.Store({
+  state: {
+    counter: 0
+  },
+  getters: {
+    computedCounter (state) {
+      return state.counter * (7 - 2 * (5 + 4))
+    }
+  }
+})
+использование: this.$store.getters.computedCounter;
+Хотя getter является функцией, вызывать ее не надо, vuex сам вызовет ее.
+
+Использование mutations 
+Это функции, которые позволяют мутировать state (сеттеры). Параметры:
+- state
+- какие либо данные, нельзя передавать асинхронные события.
+new Vuex.Store({
+  mutations: {
+    changeCounter (state, payload) {
+		setTimeout // нельзя
+      state.counter += payload
+    }
+  }
+})
+В mutations нельзя делать setTimeout или обращения к серверу. Для этого есть actions.
+
+использование: this.$store.commit('mutationName', data)
+this.$store.commit('changeCounter', val)
+
+
+Использование actions.
+Для асинхронных действий (работы с сервером) используются actions.
+actions: {
+  asyncChangeCounter (context, payload) {  
+    setTimeout(() => {
+      context.commit('changeCounter', payload.counterValue)
+    }, payload.timeoutDelay)
+  }
+}
+ 
+Использование
+this.$store.dispatch('asyncChangeCounter', {
+  counterValue: val,
+  timeoutDelay: 1200
+})
+
+Mutations и getters должны быть простыми, в actions происходит вся основная логикаф.
+
+<script>
+// src\store\index.js
+import Vue from 'vue'
+import Vuex from 'vuex'
+
+Vue.use(Vuex)
+
+export default new Vuex.Store({
+  state: { // описывает все состояние приложения
+    counter: 10
+  },
+  mutations: {
+    changeCounter (state, payload) { // возможно только синхронные операции
+      state.counter += payload
+    }
+  },
+  actions: {
+    asyncChangeCounter ({commit}, payload) { // {commit} - деконструкция объекта context
+      setTimeout(() => { // асинхронные действия 
+        commit('changeCounter', payload.counterValue)
+      }, payload.timeoutDelay)
+    }
+  },
+  getters: {
+    computedCounter (state) {
+      return state.counter * 10 // произвести действия над данными в store, чтобы избежать дублирования кода в компонентах
+    }
+  }
+})
+
+</script>
+
+src/Counter.vue
+<template>
+    <h2>Counter {{counter}}</h2>
+</template>
+
+<script>
+  export default {
+    computed: {
+      counter () {
+        return this.$store.state.counter // использование общего state приложения
+		
+		return this.$store.state.counter * (7 - 2 * (5 + 4)) // дублирование кода
+		return this.$store.getters.computedCounter; // использовать getters чтобы избежать дубилрования
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+src/Actions.vue
+<template>
+    <div>
+      <button class="btn btn-success" @click="updateCounter(1)">Add</button>
+      <button class="btn btn-danger" @click="updateCounter(-1)">Subtract</button>
+    </div>
+</template>
+
+<script>
+  export default {
+    methods: {
+      updateCounter(val) {
+        this.$store.state.counter += val // изменение обшего состояния
+		this.$store.commit('changeCounter', val) // использование mutations
+		this.$store.dispatch('asyncChangeCounter', { // использование actions
+          counterValue: val,
+          timeoutDelay: 1200
+        })
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+src/SecondCounter.vue
+<template>
+  <h2>Second Counter: {{counter}}</h2>
+</template>
+
+<script>
+  export default {
+    computed: {
+      counter () {
+		return this.$store.state.counter * (7 - 2 * (5 + 4)) // дублирование кода
+		return this.$store.getters.computedCounter; // использовать getters чтобы избежать дубилрования
+      }
+    }
+  }
+</script>
+
+<style scoped>
+
+</style>
+
+src/App.vue
+<template>
+  <div class="container text-center pt-5">
+    <app-counter></app-counter>
+	<app-second-counter></app-second-counter>
+	<hr>
+    <app-actions></app-actions>
+  </div>
+</template>
+
+<script>
+  import Counter from './Counter'
+  import Actions from './Actions'
+  import SecondCounter from './SecondCounter'
+  
+  export default {
+    components: {
+      appCounter: Counter,
+      appActions: Actions,
+	  appSecondCounter: SecondCounter
+    }
+  }
+</script>
+
+Оптимизация с помощью модулей. 
+Декомпозиция файла store на множество модулей. Создание модуля для counter'а.
+
+<script>
+// src/store/counter.js
+
+export default {
+  state: {
+    counter: 0
+  },
+  mutations: {
+    changeCounter (state, payload) {
+      state.counter += payload
+    }
+  },
+  actions: {
+    asyncChangeCounter ({commit}, payload) {
+      setTimeout(() => {
+        commit('changeCounter', payload.counterValue)
+      }, payload.timeoutDelay)
+    }
+  },
+  getters: {
+    computedCounter (state) {
+      return state.counter * 10
+    }
+  }
+}
+
+
+// src/store/index
+
+import Vue from 'vue'
+import Vuex from 'vuex'
+import counter from './counter'
+
+Vue.use(Vuex)
+
+export default new Vuex.Store({
+  modules: { // регистрация модулей
+    counter // регистрация функционала counter
+  },
+  state: {
+    title: 'Hello from store'
+  },
+  getters: {
+    title (state) {
+      return state.title + '!!!'
+    }
+  }
+})
+
+</script>
